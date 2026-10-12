@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Lucif · Links</title>
+<meta name="description" content="Tất cả link của mình ở một chỗ." />
+<meta name="theme-color" content="#fff5f8" />
+
+<meta property="og:type" content="profile" />
+<meta property="og:title" content="Lucif · Links" />
+<meta property="og:description" content="Tất cả link của mình ở một chỗ." />
+<!-- Khi đưa lên mạng, đổi thành URL tuyệt đối (https://.../assets/avatar.jpg) để preview link hiện ảnh -->
+<meta property="og:image" content="assets/avatar.jpg" />
+<link rel="icon" type="image/jpeg" href="assets/avatar.jpg" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sriracha&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="has-hero">
+
+  <div class="enter-overlay" id="enterOverlay" role="dialog" aria-modal="true" aria-label="Màn chào" tabindex="0">
+    <video class="enter-video" src="assets/hero.webm" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
+    <div class="enter-shade" aria-hidden="true"></div>
+    <div class="enter-card">
+      <div class="enter-avatar"></div>
+      <span class="enter-typed" id="enterTyped"></span>
+    </div>
+  </div>
+
+  <div class="aurora" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
+  <main class="wrap">
+    <section class="hero" aria-label="Ảnh bìa video">
+      <video class="hero-video" src="assets/hero.webm" autoplay muted loop playsinline preload="metadata"></video>
+      <div class="hero-shade" aria-hidden="true"></div>
+      <section class="card" id="card">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Chuyển giao diện sáng/tối">
+          <span class="tt-icon" aria-hidden="true"></span>
+        </button>
+
+        <header class="profile">
+          <div class="avatar-wrap">
+            <div class="avatar-ring">
+              <div class="avatar" id="avatar"></div>
+            </div>
+            <img class="frame-dragon" src="assets/frame-dragon.png" alt="" aria-hidden="true" />
+          </div>
+          <h1 class="name" id="name"></h1>
+          <p class="tagline" id="tagline"></p>
+          <p class="bio" id="bio"></p>
+          <p class="location" id="location"></p>
+        </header>
+
+        <nav class="socials" id="socials" aria-label="Mạng xã hội"></nav>
+
+        <ul class="links" id="links"></ul>
+
+        <footer class="foot">
+          <button id="copyLink" class="copy" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <span>Copy link</span>
+          </button>
+          <span class="foot-note">© <span id="year"></span> <span id="footName"></span></span>
+        </footer>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="qr-modal" id="qrModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Mã QR ủng hộ">
+    <div class="qr-backdrop" data-close></div>
+    <figure class="qr-card">
+      <img id="qrImg" alt="Mã QR ủng hộ" />
+      <figcaption id="qrCap"></figcaption>
+    </figure>
+  </div>
+
+  <!-- Widget nhạc kiểu Discord-Profile: đĩa xoay + tên bài + prev/play/next + equalizer + volume -->
+  <audio id="bg-audio" preload="none"></audio>
+  <div class="audio-widget" id="audio-widget" title="Điều khiển nhạc nền">
+    <div class="audio-disc" id="audio-disc">
+      <i class="fa-solid fa-compact-disc"></i>
+    </div>
+    <div class="audio-info">
+      <div class="audio-track" id="audio-track-title">Chưa có nhạc</div>
+      <div class="audio-artist" id="audio-artist-name">Thả file vào assets</div>
+    </div>
+    <div class="audio-controls">
+      <button id="audio-prev-btn" class="ctrl-btn" type="button" aria-label="Bài trước" title="Bài trước (Previous)">
+        <i class="fa-solid fa-backward-step"></i>
+      </button>
+      <button id="audio-play-btn" class="ctrl-btn play-btn-main" type="button" aria-label="Phát / Tạm dừng" title="Phát / Tạm dừng">
+        <i class="fa-solid fa-play" id="play-icon"></i>
+      </button>
+      <button id="audio-next-btn" class="ctrl-btn" type="button" aria-label="Bài tiếp theo" title="Bài tiếp theo (Next)">
+        <i class="fa-solid fa-forward-step"></i>
+      </button>
+      <div class="equalizer" id="equalizer" aria-hidden="true">
+        <span class="bar bar-1"></span>
+        <span class="bar bar-2"></span>
+        <span class="bar bar-3"></span>
+        <span class="bar bar-4"></span>
+      </div>
+      <div class="volume-slider-wrap">
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Volume" />
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
