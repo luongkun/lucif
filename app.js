@@ -40,6 +40,15 @@ const CONFIG = {
 
   // ---- Giao diện: "light" | "dark" | "auto" ----
   theme: "auto",
+
+  // ---- Trang setlove (view thứ 2 trong card, mở bằng nút tim góc phải) ----
+  love: {
+    title: "Cậu có thích tớ không?",
+    sub: "Suy nghĩ kỹ rồi hẵng trả lời đó nha.",
+    yes: "Có, thích nhiều",
+    no: "Không",
+    done: "Vậy là từ giờ cậu là người yêu tớ rồi đó.",
+  },
 };
 
 /* ===================== Icon set ===================== */
@@ -109,7 +118,24 @@ const initials = (name) =>
 
 const $ = (id) => document.getElementById(id);
 
-/* ===================== Theme ===================== */
+/* ===================== Chống bôi đen / sao chép =====================
+   CSS user-select:none chặn bôi đen; đoạn này chặn nốt copy/cut,
+   chuột phải, kéo ảnh và phím tắt. Nút "sao chép" trong web vẫn chạy
+   vì nó dùng clipboard API, không qua sự kiện copy của trình duyệt. */
+document.addEventListener("selectstart", (e) => e.preventDefault());
+document.addEventListener("dragstart", (e) => e.preventDefault());
+document.addEventListener("copy", (e) => {
+  if (!window.__allowCopy) e.preventDefault();
+});
+document.addEventListener("cut", (e) => e.preventDefault());
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && ["a", "c", "x", "u", "s"].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+  }
+});
+
+/* ===================== Theme (cố định, không còn nút đổi) ===================== */
 const root = document.documentElement;
 const media = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -120,19 +146,213 @@ function applyTheme(mode) {
   if (meta) meta.setAttribute("content", resolved === "dark" ? "#150b12" : "#fff5f8");
 }
 
-let themeMode =
-  localStorage.getItem("bio-theme") || (CONFIG.theme === "auto" ? "auto" : CONFIG.theme);
+applyTheme(CONFIG.theme || "auto");
+media.addEventListener("change", () => applyTheme(CONFIG.theme || "auto"));
 
-applyTheme(themeMode);
+/* ===================== Chuyển view Bio <-> Setlove ===================== */
+(function loveView() {
+  const card = $("card");
+  const btn = $("loveToggle");
+  const bio = $("viewBio");
+  const love = $("viewLove");
+  if (!card || !btn || !bio || !love) return;
 
-if (themeMode === "auto") media.addEventListener("change", () => applyTheme("auto"));
+  const yes = $("loveYes");
+  const no = $("loveNo");
+  const done = $("loveDone");
+  const btns = $("loveBtns");
 
-$("themeToggle").addEventListener("click", () => {
-  const current = root.dataset.theme;
-  themeMode = current === "dark" ? "light" : "dark";
-  localStorage.setItem("bio-theme", themeMode);
-  applyTheme(themeMode);
-});
+  // Nạp chữ từ CONFIG.love để dễ sửa
+  if (CONFIG.love) {
+    if (CONFIG.love.title) $("loveTitle").textContent = CONFIG.love.title;
+    if (CONFIG.love.sub) $("loveSub").textContent = CONFIG.love.sub;
+    if (CONFIG.love.yes && yes) yes.textContent = CONFIG.love.yes;
+    if (CONFIG.love.no && no) no.textContent = CONFIG.love.no;
+    if (CONFIG.love.done && $("loveDoneSub")) $("loveDoneSub").textContent = CONFIG.love.done;
+  }
+
+  let inLove = false;
+  function render() {
+    // Vào love → đo card bio trước khi giấu rồi khóa cứng, ra bio → thả khóa
+    if (inLove) {
+      const h = bio.offsetHeight + 0; // chiều cao nội dung bio hiện tại
+      // card.offsetHeight lúc bio còn hiện mới đúng; nếu đã giấu thì dùng viewBio scrollHeight
+      const cardH = card.offsetHeight || h;
+      if (cardH) {
+        card.style.height = cardH + "px";
+        card.style.minHeight = cardH + "px";
+        card.style.maxHeight = cardH + "px";
+      }
+    }
+    bio.hidden = inLove;
+    love.hidden = !inLove;
+    card.classList.toggle("show-love", inLove);
+    btn.innerHTML = inLove
+      ? '<i class="fa-solid fa-arrow-left"></i>'
+      : '<i class="fa-solid fa-heart"></i>';
+    btn.setAttribute("aria-label", inLove ? "Quay lại trang bio" : "Mở trang setlove");
+    if (!inLove) {
+      // Về bio → thả khóa để layout đo lại tự nhiên
+      card.style.height = "";
+      card.style.minHeight = "";
+      card.style.maxHeight = "";
+    }
+    // View đổi chiều cao card → đo lại vùng link cho đúng
+    window.dispatchEvent(new Event("resize"));
+  }
+  btn.addEventListener("click", () => {
+    inLove = !inLove;
+    // Reset mini-game mỗi lần mở lại
+    if (inLove) resetLovePos();
+    if (done) done.hidden = true;
+    if (btns) btns.style.display = "";
+    render();
+  });
+
+  function resetLovePos() {
+    if (!no || !btns || !yes) return;
+    no.classList.remove("run");
+    no.style.left = "";
+    no.style.top = "";
+    yes.classList.remove("centered");
+    yes.style.position = "";
+    yes.style.left = "";
+    yes.style.top = "";
+    yes.style.margin = "";
+    delete btns.dataset.frozen;
+    lastDodge = 0;
+  }
+
+  // Nút "Không" chạy trốn trong khung love-btns, không bao giờ đè lên nút "Có"
+  function freezeYes() {
+    // Lần né đầu tiên: ghim nút Có tại chỗ để nó không bị flex đẩy lệch
+    // (lệch là nguyên nhân đo vùng cấm sai → vẫn đè một ít)
+    if (btns.dataset.frozen) return;
+    const box = btns.getBoundingClientRect();
+    const yr = yes.getBoundingClientRect();
+    yes.style.position = "absolute";
+    yes.style.left = (yr.left - box.left) + "px";
+    yes.style.top = (yr.top - box.top) + "px";
+    yes.style.margin = "0";
+    btns.dataset.frozen = "1";
+  }
+  let lastDodge = 0;
+  function dodge(e) {
+    if (!no || !btns || !yes) return;
+    // Chống giật: tele tối đa 1 lần / 350ms
+    const now = performance.now();
+    if (now - lastDodge < 350) return;
+    lastDodge = now;
+    freezeYes();
+    const box = btns.getBoundingClientRect();
+    const yesW = yes.offsetWidth || 120;
+    const yesH = yes.offsetHeight || 40;
+    // Nút Có vào đúng tâm: ghim px cũ rồi trượt inline sang 50% + class giữ transform
+    void yes.offsetWidth;
+    yes.style.left = "50%";
+    yes.style.top = "50%";
+    yes.classList.add("centered");
+    // Tâm thật của khung cho vùng cấm của nút Không
+    const tcx = (box.width - yesW) / 2;
+    const tcy = (box.height - yesH) / 2;
+    // Nút Không tele tức thì ra chỗ khác (không transition)
+    no.classList.add("run");
+    const w = no.offsetWidth || 90;
+    const h = no.offsetHeight || 40;
+    const maxX = Math.max(box.width - w, 0);
+    const maxY = Math.max(box.height - h, 0);
+    // Vùng cấm tính theo ĐÍCH của nút Có (tâm) + đệm vừa đủ để không đè
+    // (đệm to quá + khung thấp = lần 2 hết chỗ hợp lệ → nút đứng yên)
+    const PAD = 24;
+    const yL = tcx - PAD;
+    const yT = tcy - PAD;
+    const yR = tcx + yesW + PAD;
+    const yB = tcy + yesH + PAD;
+    const overlap = (x, y) => x < yR && x + w > yL && y < yB && y + h > yT;
+    // Chỗ mới phải cách xa con trỏ (nếu biết vị trí) để không tele xong vẫn dính chuột → giật
+    const curX = e && typeof e.clientX === "number" ? e.clientX - box.left : null;
+    const curY = e && typeof e.clientY === "number" ? e.clientY - box.top : null;
+    const farFromCursor = (x, y) => {
+      if (curX === null) return true;
+      return Math.hypot(x + w / 2 - curX, y + h / 2 - curY) > 90;
+    };
+    // Chọn chỗ xa tâm nút Có nhất trong các ứng viên hợp lệ
+    const yCx = tcx + yesW / 2;
+    const yCy = tcy + yesH / 2;
+    const dist = (x, y) => Math.hypot(x + w / 2 - yCx, y + h / 2 - yCy);
+    let best = null;
+    let bestD = -1;
+    for (let t = 0; t < 60; t++) {
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+      if (!overlap(x, y) && farFromCursor(x, y)) {
+        const d = dist(x, y);
+        if (d > bestD) { bestD = d; best = [x, y]; }
+      }
+    }
+    if (!best) {
+      // Nới lỏng: bỏ điều kiện xa chuột, chỉ cần không đè nút Có
+      for (let t = 0; t < 60; t++) {
+        const x = Math.random() * maxX;
+        const y = Math.random() * maxY;
+        if (!overlap(x, y)) {
+          const d = dist(x, y);
+          if (d > bestD) { bestD = d; best = [x, y]; }
+        }
+      }
+    }
+    if (best) {
+      no.style.left = best[0] + "px";
+      no.style.top = best[1] + "px";
+      return;
+    }
+    // Dự phòng cuối: góc xa con trỏ nhất (luôn đổi chỗ, không đứng yên)
+    const corners = [[0, 0], [maxX, 0], [0, maxY], [maxX, maxY]];
+    let fb = corners[0];
+    let fd = -1;
+    for (const [x, y] of corners) {
+      const d = curX === null ? dist(x, y) : Math.hypot(x - curX, y - curY) + dist(x, y) / 2;
+      if (d > fd) { fd = d; fb = [x, y]; }
+    }
+    no.style.left = fb[0] + "px";
+    no.style.top = fb[1] + "px";
+  }
+  if (no) {
+    // Chỉ dùng pointerenter (không dùng pointerover kép để khỏi gọi 2 lần/chạm)
+    no.addEventListener("pointerenter", dodge);
+    no.addEventListener("focus", dodge);
+    no.addEventListener("touchstart", (e) => { e.preventDefault(); dodge(e); }, { passive: false });
+    no.addEventListener("click", (e) => { e.preventDefault(); dodge(e); });
+  }
+  // Dí chuột tới gần (chưa chạm) cũng né
+  if (btns) btns.addEventListener("pointermove", (e) => {
+    if (!no || !no.classList.contains("run")) return;
+    const n = no.getBoundingClientRect();
+    const cx = n.left + n.width / 2;
+    const cy = n.top + n.height / 2;
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) < 70) dodge(e);
+  });
+
+  // Bấm "Có" → mưa tim + lời chốt
+  function burstHearts() {
+    for (let i = 0; i < 16; i++) {
+      const s = document.createElement("span");
+      s.className = "mini-heart";
+      s.textContent = "❤";
+      s.style.left = (8 + Math.random() * 84) + "%";
+      s.style.fontSize = (10 + Math.random() * 16) + "px";
+      s.style.animationDelay = (Math.random() * 0.5) + "s";
+      love.appendChild(s);
+      setTimeout(() => s.remove(), 2300);
+    }
+  }
+  if (yes) yes.addEventListener("click", () => {
+    if (btns) btns.style.display = "none";
+    if (done) done.hidden = false;
+    burstHearts();
+    showToast("Đã chốt đơn ❤️");
+  });
+})();
 
 /* ===================== Render ===================== */
 // Avatar
@@ -269,6 +489,9 @@ if (CONFIG.name) document.title = `${CONFIG.name} · Links`;
 
   function run() {
     if (busy) return;
+    // Đang ở view setlove thì không đo link (link đang hidden)
+    const bioView = document.getElementById("viewBio");
+    if (bioView && bioView.hidden) { busy = false; return; }
     busy = true;
     document.body.classList.remove("allow-scroll");
     links.style.maxHeight = "";           // đo tự nhiên trước
@@ -359,7 +582,11 @@ async function copyText(text) {
     ta.select();
     ta.setSelectionRange(0, text.length);
     let ok = false;
-    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    try {
+      window.__allowCopy = true;
+      ok = document.execCommand("copy");
+    } catch { ok = false; }
+    window.__allowCopy = false;
     ta.remove();
     return ok;
   }

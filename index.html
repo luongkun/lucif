@@ -44,10 +44,11 @@
       <video class="hero-video" src="assets/hero.webm" autoplay muted loop playsinline preload="metadata"></video>
       <div class="hero-shade" aria-hidden="true"></div>
       <section class="card" id="card">
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Chuyển giao diện sáng/tối">
-          <span class="tt-icon" aria-hidden="true"></span>
+        <button id="loveToggle" class="theme-toggle love-toggle" type="button" aria-label="Mở trang setlove">
+          <i class="fa-solid fa-heart"></i>
         </button>
 
+        <div class="card-view" id="viewBio">
         <header class="profile">
           <div class="avatar-wrap">
             <div class="avatar-ring">
@@ -75,6 +76,22 @@
           </button>
           <span class="foot-note">© <span id="year"></span> <span id="footName"></span></span>
         </footer>
+        </div>
+
+        <div class="card-view love-view" id="viewLove" hidden>
+          <p class="love-tag">setlove 💌</p>
+          <div class="love-heart" aria-hidden="true"><i class="fa-solid fa-heart"></i></div>
+          <h2 class="love-title" id="loveTitle">Cậu có thích tớ không?</h2>
+          <p class="love-sub" id="loveSub">Suy nghĩ kỹ rồi hẵng trả lời đó nha.</p>
+          <div class="love-btns" id="loveBtns">
+            <button id="loveYes" class="love-yes" type="button">Có, thích nhiều</button>
+            <button id="loveNo" class="love-no" type="button">Không</button>
+          </div>
+          <div class="love-done" id="loveDone" hidden>
+            <p class="love-done-title">Tớ biết mà ❤️</p>
+            <p class="love-done-sub" id="loveDoneSub">Vậy là từ giờ cậu là người yêu tớ rồi đó.</p>
+          </div>
+        </div>
       </section>
     </section>
   </main>
